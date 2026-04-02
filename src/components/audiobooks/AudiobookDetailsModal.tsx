@@ -30,6 +30,7 @@ interface AudiobookDetailsModalProps {
   onClose: () => void;
   onRequestSuccess?: () => void;
   onStatusChange?: (newStatus: string) => void;
+  onAvailabilityChange?: (isAvailable: boolean) => void;
   onIgnoreChange?: (isIgnored: boolean) => void;
   isRequested?: boolean;
   requestStatus?: string | null;
@@ -38,6 +39,9 @@ interface AudiobookDetailsModalProps {
   hideRequestActions?: boolean;
   hasReportedIssue?: boolean;
   aiReason?: string | null;
+  libraryMatchTitle?: string | null;
+  libraryMatchAuthor?: string | null;
+  libraryFilePath?: string | null;
 }
 
 // Status helper
@@ -72,6 +76,7 @@ export function AudiobookDetailsModal({
   onClose,
   onRequestSuccess,
   onStatusChange,
+  onAvailabilityChange,
   onIgnoreChange,
   isRequested = false,
   requestStatus = null,
@@ -80,6 +85,9 @@ export function AudiobookDetailsModal({
   hideRequestActions = false,
   hasReportedIssue = false,
   aiReason = null,
+  libraryMatchTitle = null,
+  libraryMatchAuthor = null,
+  libraryFilePath = null,
 }: AudiobookDetailsModalProps) {
   const { user } = useAuth();
   const { squareCovers } = usePreferences();
@@ -105,6 +113,9 @@ export function AudiobookDetailsModal({
   const [isDownloading, setIsDownloading] = useState(false);
   const [coverError, setCoverError] = useState(false);
   const [isTogglingIgnore, setIsTogglingIgnore] = useState(false);
+  const [showLibraryDebug, setShowLibraryDebug] = useState(false);
+  const [isBreakingMatch, setIsBreakingMatch] = useState(false);
+  const [showBreakConfirm, setShowBreakConfirm] = useState(false);
 
   // Sync local status when the prop changes (e.g. page data refreshes)
   useEffect(() => {
@@ -226,6 +237,24 @@ export function AudiobookDetailsModal({
       showNotification(err instanceof Error ? err.message : 'Failed to update ignore status', 'error');
     } finally {
       setIsTogglingIgnore(false);
+    }
+  };
+
+  const handleBreakMatch = async () => {
+    setIsBreakingMatch(true);
+    try {
+      const res = await fetchWithAuth(`/api/audiobooks/${asin}/break-match`, {
+        method: 'POST',
+      });
+      if (!res.ok) throw new Error('Failed to break match');
+      showNotification('Match removed — book is no longer marked as In Your Library');
+      onAvailabilityChange?.(false);
+      setShowBreakConfirm(false);
+      setTimeout(onClose, 1500);
+    } catch (err) {
+      showNotification(err instanceof Error ? err.message : 'Failed to break match', 'error');
+    } finally {
+      setIsBreakingMatch(false);
     }
   };
 
@@ -595,6 +624,79 @@ export function AudiobookDetailsModal({
                           : 'In Progress'}
                     </span>
                   </div>
+                </div>
+              )}
+
+              {/* Library Match Details - collapsible, only when book is marked available */}
+              {isAvailable && (
+                <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700/50">
+                  <button
+                    onClick={() => { setShowLibraryDebug(prev => !prev); setShowBreakConfirm(false); }}
+                    className="flex items-center gap-2 w-full text-left text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                  >
+                    <svg
+                      className={`w-4 h-4 transition-transform duration-200 ${showLibraryDebug ? 'rotate-90' : ''}`}
+                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                    Library Match Details
+                  </button>
+                  {showLibraryDebug && (
+                    <div className="mt-3 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800/40 space-y-3 text-sm">
+                      {libraryMatchTitle && (
+                        <div>
+                          <p className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wide mb-0.5">Matched Title</p>
+                          <p className="text-gray-900 dark:text-gray-100">{libraryMatchTitle}</p>
+                        </div>
+                      )}
+                      {libraryMatchAuthor && (
+                        <div>
+                          <p className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wide mb-0.5">Matched Author</p>
+                          <p className="text-gray-900 dark:text-gray-100">{libraryMatchAuthor}</p>
+                        </div>
+                      )}
+                      {libraryFilePath && (
+                        <div>
+                          <p className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wide mb-0.5">File Path</p>
+                          <p className="font-mono text-xs text-gray-800 dark:text-gray-200 break-all">{libraryFilePath}</p>
+                        </div>
+                      )}
+                      {user?.role === 'admin' && (
+                        <div className="pt-1 border-t border-emerald-200 dark:border-emerald-800/40">
+                          {!showBreakConfirm ? (
+                            <button
+                              onClick={() => setShowBreakConfirm(true)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                              </svg>
+                              Break Match
+                            </button>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-red-600 dark:text-red-400">Remove this match?</span>
+                              <button
+                                onClick={handleBreakMatch}
+                                disabled={isBreakingMatch}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition-colors"
+                              >
+                                {isBreakingMatch ? 'Removing...' : 'Confirm'}
+                              </button>
+                              <button
+                                onClick={() => setShowBreakConfirm(false)}
+                                disabled={isBreakingMatch}
+                                className="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

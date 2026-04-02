@@ -148,7 +148,9 @@ export async function processPlexRecentlyAddedCheck(payload: PlexRecentlyAddedPa
             summary: item.description || existing.summary,
             duration: item.duration ? item.duration * 1000 : existing.duration,
             year: item.year || existing.year,
-            asin: item.asin || existing.asin,  // Update ASIN if available
+            // When asinManuallyCleared is true, existing.asin is null — keep it null
+            // instead of letting a new scan-provided item.asin overwrite the cleared state
+            asin: existing.asinManuallyCleared ? existing.asin : (item.asin || existing.asin),
             isbn: item.isbn || existing.isbn,  // Update ISBN if available
             thumbUrl: item.coverUrl || existing.thumbUrl,
             lastScannedAt: new Date(),

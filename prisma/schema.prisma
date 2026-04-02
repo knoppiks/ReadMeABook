@@ -137,8 +137,9 @@ model PlexLibrary {
   userRating Decimal? @map("user_rating") @db.Decimal(3, 1) // User's rating (0-10 scale from Plex)
 
   // Universal identifiers (works for both Plex and Audiobookshelf)
-  asin String? // Audible ASIN - extracted from Plex GUID or stored directly from ABS
-  isbn String? // ISBN (10 or 13) - for additional matching capability
+  asin                String?  // Audible ASIN - extracted from Plex GUID or stored directly from ABS
+  isbn                String?  // ISBN (10 or 13) - for additional matching capability
+  asinManuallyCleared Boolean  @default(false) @map("asin_manually_cleared") // Set true when admin manually breaks a match — scan processors skip ASIN updates
 
   // File information
   filePath            String? @map("file_path") @db.Text

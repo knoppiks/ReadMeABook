@@ -59,13 +59,17 @@ export function AudiobookCard({
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [localRequestStatus, setLocalRequestStatus] = useState<string | undefined>(undefined);
+  const [localIsAvailable, setLocalIsAvailable] = useState<boolean | undefined>(undefined);
   const [localIsIgnored, setLocalIsIgnored] = useState<boolean | undefined>(undefined);
   const [coverError, setCoverError] = useState(false);
 
   // Build a display-only audiobook with local overrides
-  const displayAudiobook = localRequestStatus !== undefined
-    ? { ...audiobook, requestStatus: localRequestStatus }
-    : audiobook;
+  const effectiveIsAvailable = localIsAvailable !== undefined ? localIsAvailable : audiobook.isAvailable;
+  const displayAudiobook = {
+    ...audiobook,
+    ...(localRequestStatus !== undefined ? { requestStatus: localRequestStatus } : {}),
+    isAvailable: effectiveIsAvailable,
+  };
   const status = getStatusConfig(displayAudiobook);
   const isIgnored = localIsIgnored !== undefined ? localIsIgnored : audiobook.isIgnored;
 
@@ -268,12 +272,16 @@ export function AudiobookCard({
         onClose={() => setShowModal(false)}
         onRequestSuccess={onRequestSuccess}
         onStatusChange={(newStatus) => setLocalRequestStatus(newStatus)}
+        onAvailabilityChange={(available) => setLocalIsAvailable(available)}
         onIgnoreChange={(ignored) => setLocalIsIgnored(ignored)}
         isRequested={audiobook.isRequested || localRequestStatus !== undefined}
         requestStatus={displayAudiobook.requestStatus}
-        isAvailable={audiobook.isAvailable}
+        isAvailable={effectiveIsAvailable}
         requestedByUsername={audiobook.requestedByUsername}
         hasReportedIssue={audiobook.hasReportedIssue}
+        libraryMatchTitle={audiobook.libraryMatchTitle}
+        libraryMatchAuthor={audiobook.libraryMatchAuthor}
+        libraryFilePath={audiobook.libraryFilePath}
       />
     </>
   );

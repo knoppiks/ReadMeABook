@@ -24,6 +24,9 @@ jobs:
       contents: read
       packages: write
 
+    env:
+      CALL_WEBHOOK: ${{ secrets.WEBHOOK_URL != '' }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -103,7 +106,7 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Send Discord notification
-        if: github.event_name != 'pull_request' && success()
+        if: github.event_name != 'pull_request' && env.CALL_WEBHOOK == 'true' && success()
         run: |
           curl -H "Content-Type: application/json" \
             -X POST \

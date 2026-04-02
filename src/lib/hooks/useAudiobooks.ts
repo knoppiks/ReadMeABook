@@ -34,6 +34,9 @@ export interface Audiobook {
   requestedByUsername?: string | null;  // Username who requested (only if not current user)
   hasReportedIssue?: boolean;  // True if an open issue exists for this audiobook
   isIgnored?: boolean;  // True if this user has ignored this audiobook from auto-requests
+  libraryMatchTitle?: string | null;  // Title stored in the library for the matched entry
+  libraryMatchAuthor?: string | null;  // Author stored in the library for the matched entry
+  libraryFilePath?: string | null;  // File path stored in the library for the matched entry
 }
 
 export function useAudiobooks(type: 'popular' | 'new-releases', limit: number = 20, page: number = 1, hideAvailable: boolean = false) {

@@ -26,6 +26,7 @@ export interface AudiobookMatchResult {
   plexRatingKey: string | null;
   title: string;
   author: string;
+  filePath: string | null;
 }
 
 /**
@@ -65,6 +66,7 @@ export async function findPlexMatch(
   // Check both dedicated asin field and plexGuid for backward compatibility
   const plexBooks = await prisma.plexLibrary.findMany({
     where: {
+      asinManuallyCleared: false,
       OR: [
         { asin: audiobook.asin },
         { plexGuid: { contains: audiobook.asin } },
@@ -76,6 +78,7 @@ export async function findPlexMatch(
       title: true,
       author: true,
       asin: true,
+      filePath: true,
     },
   });
 
@@ -150,6 +153,9 @@ export async function enrichAudiobookWithMatch(audiobook: AudiobookMatchInput & 
     ...audiobook,
     isAvailable: match !== null,
     plexGuid: match?.plexGuid || null,
+    libraryMatchTitle: match?.title || null,
+    libraryMatchAuthor: match?.author || null,
+    libraryFilePath: match?.filePath || null,
   };
 }
 
@@ -193,7 +199,7 @@ export async function enrichAudiobooksWithMatches(
 
         if (allSiblingAsins.size > 0) {
           const siblingLibraryMatches = await prisma.plexLibrary.findMany({
-            where: { asin: { in: [...allSiblingAsins] } },
+            where: { asin: { in: [...allSiblingAsins] }, asinManuallyCleared: false },
             select: { asin: true, plexGuid: true },
           });
           const libraryAsinSet = new Set(

@@ -92,7 +92,9 @@ export async function processScanPlex(payload: ScanPlexPayload): Promise<any> {
               summary: item.description || existing.summary,
               duration: item.duration ? item.duration * 1000 : existing.duration, // Convert seconds to milliseconds
               year: item.year || existing.year,
-              asin: item.asin || existing.asin,  // Store ASIN from library backend
+              // When asinManuallyCleared is true, existing.asin is null — keep it null
+              // instead of letting a new scan-provided item.asin overwrite the cleared state
+              asin: existing.asinManuallyCleared ? existing.asin : (item.asin || existing.asin),
               isbn: item.isbn || existing.isbn,  // Store ISBN from library backend
               thumbUrl: item.coverUrl || existing.thumbUrl,
               plexLibraryId: targetLibraryId,
